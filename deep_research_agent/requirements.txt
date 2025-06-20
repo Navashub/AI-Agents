@@ -1,0 +1,26 @@
+# Deep Research Project Dependencies
+
+# OpenAI Agents SDK - Core framework for building AI agents
+openai-agents
+
+# Environment variable management
+python-dotenv
+
+# Web UI framework for the Gradio interface
+gradio
+
+# HTTP requests library for push notifications
+requests
+
+# Data validation and settings management using Python type annotations
+pydantic
+
+# Async programming support (built into Python 3.7+, but good to be explicit)
+asyncio
+
+# IPython and Jupyter notebook support (for lab notebooks)
+ipython
+jupyter
+
+# Pretty printing for debugging
+pprint 
