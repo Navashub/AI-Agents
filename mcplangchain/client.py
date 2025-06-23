@@ -30,8 +30,8 @@ async def main():
     os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 
     tools=await client.get_tools()
-    model = ChatGroq(model="qwen-qwq-32b")
-    # model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    # model = ChatGroq(model="qwen-qwq-32b")
+    model = ChatOpenAI(model="gpt-4o", temperature=0)
     agent = create_react_agent(
         model,
         tools
@@ -46,7 +46,7 @@ async def main():
     print("Math Response: ", math_response['messages'][-1].content)
 
     weather_response = await agent.ainvoke(
-        {"messages": [{"role": "user", "content": "What is the weather in Nairobi?"}]}
+        {"messages": [{"role": "user", "content": "What is the weather in Nairobi?is it good for driving a convertible car?"}]}
     )
     print("Weather Response: ", weather_response['messages'][-1].content)
 
