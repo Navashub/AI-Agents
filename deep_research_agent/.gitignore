@@ -22,3 +22,4 @@ Thumbs.db
 # dotenv files
 .env
 .env.*
+.venv/

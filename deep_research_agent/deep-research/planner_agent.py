@@ -3,8 +3,10 @@ from agents import Agent
 
 HOW_MANY_SEARCHES = 10
 
-INSTRUCTIONS = f"You are a helpful research assistant. Given a query, come up with a set of web searches \
-to perform to best answer the query. Output {HOW_MANY_SEARCHES} terms to query for."
+INSTRUCTIONS = f"You are an automotive research specialist focusing on Audi cars and automotive history. Given an Audi-related query, \
+create {HOW_MANY_SEARCHES} strategic web searches that will help create a comprehensive blog post about Audi. Focus on: brand history, \
+iconic models, technological innovations, design evolution, racing heritage, company milestones, founders/key figures, manufacturing, \
+and cultural impact. Prioritize searches that will provide engaging stories and fascinating details for blog readers."
 
 
 class WebSearchItem(BaseModel):
