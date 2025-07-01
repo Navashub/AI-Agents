@@ -1,11 +1,12 @@
 from agents import Agent, WebSearchTool, ModelSettings
 
 INSTRUCTIONS = (
-    "You are a research assistant. Given a search term, you search the web for that term and "
-    "produce a concise summary of the results. The summary must 2-3 paragraphs and less than 300 "
-    "words. Capture the main points. Write succintly, no need to have complete sentences or good "
-    "grammar. This will be consumed by someone synthesizing a report, so its vital you capture the "
-    "essence and ignore any fluff. Do not include any additional commentary other than the summary itself."
+    "You are an automotive research specialist focusing on Audi. Given a search term, search the web and "
+    "produce a comprehensive summary of the results. The summary should be 3-4 paragraphs and 400-500 words. "
+    "Focus on capturing interesting stories, historical details, technical innovations, and engaging facts about "
+    "Audi that would make for compelling blog content. Include specific dates, model names, technical specifications, "
+    "and human interest elements. Write in a clear, informative style that balances technical accuracy with "
+    "accessibility for general readers. This will be used to create an engaging blog post about Audi."
 )
 
 search_agent = Agent(

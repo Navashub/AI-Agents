@@ -74,8 +74,8 @@ class ResearchManager:
         print("Finished writing report")
         return result.final_output_as(ReportData)
     
-    async def send_push(self, report: ReportData) -> None:
-        print("Pushing notification...")
-        result = await Runner.run(push_agent,report.short_summary)
-        print("Notification sent")
-        return report
+    # async def send_push(self, report: ReportData) -> None:
+    #     print("Pushing notification...")
+    #     result = await Runner.run(push_agent,report.short_summary)
+    #     print("Notification sent")
+    #     return report
