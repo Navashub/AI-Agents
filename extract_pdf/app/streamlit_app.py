@@ -38,7 +38,7 @@ def display_pdf(uploaded_file):
 def load_streamlit_page():
 
     """
-    Load the streamlit page with two columns. The left column contains a text input box for the user to input their OpenAI API key, and a file uploader for the user to upload a PDF document. The right column contains a header and text that greet the user and explain the purpose of the tool.
+    Load the streamlit page with two columns. The left column contains a text input box for the user to input their Google AI API key, and a file uploader for the user to upload a PDF document. The right column contains a header and text that greet the user and explain the purpose of the tool.
 
     Returns:
         col1: The left column Streamlit object.
@@ -51,8 +51,8 @@ def load_streamlit_page():
     col1, col2 = st.columns([0.5, 0.5], gap="large")
 
     with col1:
-        st.header("Input your OpenAI API key")
-        st.text_input('OpenAI API key', type='password', key='api_key',
+        st.header("Input your Google AI API key")
+        st.text_input('Google AI API key', type='password', key='api_key',
                     label_visibility="collapsed", disabled=False)
         st.header("Upload file")
         uploaded_file = st.file_uploader("Please upload your PDF document:", type= "pdf")
@@ -87,3 +87,5 @@ with col1:
                             
             placeholder = st.empty()
             placeholder = st.write(answer)
+
+

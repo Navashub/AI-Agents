@@ -1,6 +1,6 @@
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.vectorstores import Chroma
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
@@ -77,18 +77,19 @@ def split_document(documents, chunk_size, chunk_overlap):
 
 def get_embedding_function(api_key):
     """
-    Return an OpenAIEmbeddings object, which is used to create vector embeddings from text.
-    The embeddings model used is "text-embedding-ada-002" and the OpenAI API key is provided
+    Return a GoogleGenerativeAIEmbeddings object, which is used to create vector embeddings from text.
+    The embeddings model used is "models/embedding-001" and the Google AI API key is provided
     as an argument to the function.
 
     Parameters:
-        api_key (str): The OpenAI API key to use when calling the OpenAI Embeddings API.
+        api_key (str): The Google AI API key to use when calling the Google AI Embeddings API.
 
     Returns:
-        OpenAIEmbeddings: An OpenAIEmbeddings object, which can be used to create vector embeddings from text.
+        GoogleGenerativeAIEmbeddings: A GoogleGenerativeAIEmbeddings object, which can be used to create vector embeddings from text.
     """
-    embeddings = OpenAIEmbeddings(
-        model="text-embedding-ada-002", openai_api_key=api_key
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/embedding-001", 
+        google_api_key=api_key
     )
     return embeddings
 
@@ -140,7 +141,7 @@ def create_vectorstore_from_texts(documents, api_key, file_name):
     Create a vector store from a list of texts.
 
     :param documents: A list of generic text documents
-    :param api_key: The OpenAI API key used to create the vector store
+    :param api_key: The Google AI API key used to create the vector store
     :param file_name: The name of the file to associate with the vector store
 
     :return: A Chroma vector store object
@@ -162,7 +163,7 @@ def load_vectorstore(file_name, api_key, vectorstore_path="db"):
     Load a previously saved Chroma vector store from disk.
 
     :param file_name: The name of the file to load (without the path)
-    :param api_key: The OpenAI API key used to create the vector store
+    :param api_key: The Google AI API key used to create the vector store
     :param vectorstore_path: The path to the directory where the vector store was saved (default: "db")
     
     :return: A Chroma vector store object
@@ -219,11 +220,15 @@ def query_document(vectorstore, query, api_key):
 
     :param vectorstore: A Chroma vector store object
     :param query: The question to ask the vector store
-    :param api_key: The OpenAI API key to use when calling the OpenAI Embeddings API
+    :param api_key: The Google AI API key to use when calling the Google AI API
 
     :return: A pandas DataFrame with three rows: 'answer', 'source', and 'reasoning'
     """
-    llm = ChatOpenAI(model="gpt-4o-mini", api_key=api_key)
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-flash", 
+        google_api_key=api_key,
+        temperature=0
+    )
 
     retriever=vectorstore.as_retriever(search_type="similarity")
 
@@ -232,7 +237,7 @@ def query_document(vectorstore, query, api_key):
     rag_chain = (
             {"context": retriever | format_docs, "question": RunnablePassthrough()}
             | prompt_template
-            | llm.with_structured_output(ExtractedInfoWithSources, strict=True)
+            | llm.with_structured_output(ExtractedInfoWithSources)
         )
 
     structured_response = rag_chain.invoke(query)
