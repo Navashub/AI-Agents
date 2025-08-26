@@ -198,15 +198,12 @@ Contributions are welcome! Here's how to contribute:
 ### Development Setup
 ```bash
 # Clone and setup development environment
-git clone <your-fork>
+git clone https://github.com/Navashub/AI-Agents/tree/main/ai-scraper
 cd ai-scraper
 pip install -r requirements.txt
 
 
 
-
-# Code formatting
-black ai_scraper.py
 ```
 
 ## 📈 Roadmap
