@@ -1,0 +1,13 @@
+[project]
+name = "ai-translator-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dotenv>=0.9.9",
+    "langchain-core>=0.3.76",
+    "langchain-groq>=0.3.8",
+    "langchain-openai>=0.3.33",
+    "streamlit>=1.49.1",
+]
