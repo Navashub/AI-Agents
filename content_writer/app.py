@@ -3,7 +3,8 @@ import asyncio
 import json
 from content_agent import (
     get_transcript, 
-    create_content_agent, 
+    create_content_agent,
+    generate_content_simple,
     Runner,
     RunConfig,
     ItemHelpers, 
@@ -99,7 +100,7 @@ with st.container():
     with col1:
         video_id = st.text_input(
             "YouTube Video ID", 
-            "6hr6wZr1N_8", 
+            "e5aDRQGO2m8", 
             help="Extract from URL: youtube.com/watch?v=VIDEO_ID"
         )
     with col2:
@@ -147,9 +148,23 @@ def parse_json_content(output: str, platform: str) -> dict:
     except json.JSONDecodeError:
         pass
     
-    # Fallback: search for JSON objects in text
+    # Try splitting by newlines (for generate_content_simple output)
+    lines = output.split('\n\n')
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            data = json.loads(line)
+            if isinstance(data, dict) and data.get("platform", "").lower() == platform.lower():
+                return data
+        except json.JSONDecodeError:
+            continue
+    
+    # Fallback: search for JSON objects in text using regex
     import re
-    json_pattern = r'\{[^{}]*"platform"\s*:\s*"' + platform + r'"[^{}]*\}'
+    # More robust pattern that handles nested content with escaped quotes
+    json_pattern = r'\{"platform"\s*:\s*"' + platform + r'"[^}]*(?:"content"\s*:\s*"(?:[^"\\]|\\.)*")[^}]*\}'
     matches = re.findall(json_pattern, output, re.IGNORECASE | re.DOTALL)
     if matches:
         try:
@@ -163,6 +178,7 @@ def parse_json_content(output: str, platform: str) -> dict:
 
 def display_platform_content(platform: str, content_data: dict):
     """Display content card for a platform"""
+    import html
     content = content_data.get("content", "No content generated")
     char_count = content_data.get("char_count", len(content))
     
@@ -192,8 +208,9 @@ def display_platform_content(platform: str, content_data: dict):
         unsafe_allow_html=True
     )
     
-    # Content display
-    st.markdown(f'<div class="content-box">{content}</div>', unsafe_allow_html=True)
+    # Content display - HTML escape to prevent rendering JSON/special chars
+    escaped_content = html.escape(content)
+    st.markdown(f'<div class="content-box">{escaped_content}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -203,6 +220,12 @@ async def run_agent(query: str, video_id: str, platforms: list[str]) -> str:
     if not transcript:
         return "ERROR: Could not fetch transcript. Please check the video ID."
     
+    # Use simple generation for Ollama (agents framework doesn't support Ollama well)
+    if not USE_OPENAI:
+        output = generate_content_simple(transcript, platforms)
+        return output
+    
+    # Use agents framework for OpenAI
     platform_list = ", ".join(platforms)
     msg = f"""{query}
 
@@ -219,12 +242,7 @@ Video Transcript:
     agent = create_content_agent(platforms)
     
     with trace("Generating content"):
-        # Use Ollama provider if not using OpenAI
-        if USE_OPENAI:
-            result = await Runner.run(agent, input_items)
-        else:
-            run_config = RunConfig(model_provider=ollama_provider)
-            result = await Runner.run(agent, input_items, run_config=run_config)
+        result = await Runner.run(agent, input_items)
         output = ItemHelpers.text_message_outputs(result.new_items)
         return output
 

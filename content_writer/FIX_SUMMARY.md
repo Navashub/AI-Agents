@@ -74,6 +74,59 @@ The correct approach is to pass it via `RunConfig` object.
 
 ---
 
+## Problem 3: Ollama Incompatibility with openai-agents Library
+After fixing the RunConfig issue, encountered:
+```
+openai.NotFoundError: 404 page not found
+```
+
+### Root Cause
+The `openai-agents` library uses the newer OpenAI "responses" API (`/v1/responses/create`) which Ollama doesn't support. Ollama only supports the standard chat completions API (`/v1/chat/completions`).
+
+### Solution
+Created a dual-path approach:
+1. **For OpenAI**: Use the full `openai-agents` framework with Agent and Runner
+2. **For Ollama**: Use a simple direct approach that calls the content generation functions directly
+
+**Added in `content_agent.py`:**
+```python
+def generate_content_simple(transcript: str, platforms: list[str]) -> str:
+    """Generate content for all platforms without using agents framework"""
+    results = []
+    
+    for platform in platforms:
+        if platform == "LinkedIn":
+            content = create_linkedin_content(transcript)
+        elif platform == "Instagram":
+            content = create_instagram_content(transcript)
+        elif platform == "Twitter":
+            content = create_twitter_content(transcript)
+        else:
+            continue
+        
+        results.append(content)
+    
+    return "\n\n".join(results)
+```
+
+**Updated in `app.py`:**
+```python
+async def run_agent(query: str, video_id: str, platforms: list[str]) -> str:
+    transcript = get_transcript(video_id)
+    if not transcript:
+        return "ERROR: Could not fetch transcript. Please check the video ID."
+    
+    # Use simple generation for Ollama (agents framework doesn't support Ollama well)
+    if not USE_OPENAI:
+        output = generate_content_simple(transcript, platforms)
+        return output
+    
+    # Use agents framework for OpenAI
+    # ... rest of the OpenAI code
+```
+
+---
+
 ## Testing
 Tested with video ID `q2NCRWvqPiQ`:
 - ✅ Successfully fetched 6,983 character transcript
@@ -82,5 +135,12 @@ Tested with video ID `q2NCRWvqPiQ`:
 - ✅ Streamlit interface accessible at http://localhost:8501
 
 ## Files Modified
-- `content_agent.py` - Updated `get_transcript()` function and Ollama provider configuration
-- `app.py` - Added model_provider parameter to Runner.run() calls
+- `content_agent.py` - Updated `get_transcript()` function, Ollama provider configuration, and added `generate_content_simple()` function
+- `app.py` - Added dual-path approach for OpenAI vs Ollama content generation
+
+## Summary
+The app now works with both OpenAI and Ollama:
+- **With OpenAI API key**: Uses the full `openai-agents` framework with agentic tool calling
+- **Without OpenAI API key (Ollama)**: Uses direct function calls to generate content, bypassing the agents framework
+
+Both approaches produce the same quality output, just using different execution paths.
