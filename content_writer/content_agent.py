@@ -91,14 +91,54 @@ class LLMClient:
 llm_client = LLMClient()
 
 # -----------------------------------------------------
+# Helper Functions
+# -----------------------------------------------------
+
+def extract_json_from_text(text: str) -> Optional[dict]:
+    """Extract the first valid JSON object from text that may contain extra content"""
+    import re
+    
+    # Find all potential JSON object starts
+    for match in re.finditer(r'\{', text):
+        start_pos = match.start()
+        # Try to parse from this position
+        brace_count = 0
+        in_string = False
+        escape_next = False
+        
+        for i, char in enumerate(text[start_pos:], start=start_pos):
+            if escape_next:
+                escape_next = False
+                continue
+            
+            if char == '\\':
+                escape_next = True
+                continue
+            
+            if char == '"' and not escape_next:
+                in_string = not in_string
+            
+            if not in_string:
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        # Found complete JSON object
+                        json_str = text[start_pos:i+1]
+                        try:
+                            return json.loads(json_str)
+                        except json.JSONDecodeError:
+                            break  # Try next opening brace
+    
+    return None
+
+# -----------------------------------------------------
 # Platform-Specific Content Tools with JSON Output
 # -----------------------------------------------------
 
-@function_tool
-def create_linkedin_content(video_transcript: str) -> str:
-    """Creates professional LinkedIn content for automotive industry professionals.
-    Returns JSON: {"platform": "LinkedIn", "content": "..."}"""
-    
+def _create_linkedin_content_impl(video_transcript: str) -> str:
+    """Internal implementation for LinkedIn content creation"""
     linkedin_prompt = f"""Create a LinkedIn post for audispot254 (automotive account).
 
 TRANSCRIPT: {video_transcript}
@@ -120,23 +160,38 @@ CRITICAL: Return ONLY valid JSON in this exact format:
 {{"platform": "LinkedIn", "content": "your post content here"}}"""
 
     result = llm_client.generate(linkedin_prompt, max_tokens=500, temperature=0.7)
+    print(f"DEBUG - LinkedIn LLM raw result: {result[:200]}...")  # Debug output
     
-    # Ensure valid JSON response
+    # Extract JSON from response (LLM might add extra text)
+    parsed = extract_json_from_text(result)
+    if parsed:
+        if "platform" not in parsed:
+            parsed["platform"] = "LinkedIn"
+        final_output = json.dumps(parsed)
+        print(f"DEBUG - LinkedIn final output: {final_output[:200]}...")  # Debug output
+        return final_output
+    
+    # Fallback: try parsing entire result
     try:
         parsed = json.loads(result)
         if "platform" not in parsed:
             parsed["platform"] = "LinkedIn"
         return json.dumps(parsed)
     except json.JSONDecodeError:
-        # Fallback: wrap raw content
+        # Last resort: wrap raw content
+        print(f"DEBUG - Failed to extract JSON, wrapping raw content")
         return json.dumps({"platform": "LinkedIn", "content": result})
 
 
-@function_tool  
-def create_instagram_content(video_transcript: str) -> str:
-    """Creates engaging Instagram content for car enthusiasts and younger audience.
-    Returns JSON: {"platform": "Instagram", "content": "..."}"""
-    
+@function_tool
+def create_linkedin_content(video_transcript: str) -> str:
+    """Creates professional LinkedIn content for automotive industry professionals.
+    Returns JSON: {"platform": "LinkedIn", "content": "..."}"""
+    return _create_linkedin_content_impl(video_transcript)
+
+
+def _create_instagram_content_impl(video_transcript: str) -> str:
+    """Internal implementation for Instagram content creation"""
     instagram_prompt = f"""Create an Instagram post for audispot254 (automotive account).
 
 TRANSCRIPT: {video_transcript}
@@ -160,6 +215,14 @@ CRITICAL: Return ONLY valid JSON in this exact format:
 
     result = llm_client.generate(instagram_prompt, max_tokens=400, temperature=0.8)
     
+    # Extract JSON from response (LLM might add extra text)
+    parsed = extract_json_from_text(result)
+    if parsed:
+        if "platform" not in parsed:
+            parsed["platform"] = "Instagram"
+        return json.dumps(parsed)
+    
+    # Fallback: try parsing entire result
     try:
         parsed = json.loads(result)
         if "platform" not in parsed:
@@ -169,11 +232,15 @@ CRITICAL: Return ONLY valid JSON in this exact format:
         return json.dumps({"platform": "Instagram", "content": result})
 
 
-@function_tool
-def create_twitter_content(video_transcript: str) -> str:
-    """Creates concise Twitter content for quick engagement.
-    Returns JSON: {"platform": "Twitter", "content": "...", "char_count": 123}"""
-    
+@function_tool  
+def create_instagram_content(video_transcript: str) -> str:
+    """Creates engaging Instagram content for car enthusiasts and younger audience.
+    Returns JSON: {"platform": "Instagram", "content": "..."}"""
+    return _create_instagram_content_impl(video_transcript)
+
+
+def _create_twitter_content_impl(video_transcript: str) -> str:
+    """Internal implementation for Twitter content creation"""
     twitter_prompt = f"""Create a Twitter/X post for audispot254 (automotive account).
 
 TRANSCRIPT: {video_transcript}
@@ -196,6 +263,17 @@ CRITICAL: Return ONLY valid JSON in this exact format:
 
     result = llm_client.generate(twitter_prompt, max_tokens=250, temperature=0.9)
     
+    # Extract JSON from response (LLM might add extra text)
+    parsed = extract_json_from_text(result)
+    if parsed:
+        if "platform" not in parsed:
+            parsed["platform"] = "Twitter"
+        # Add character count if not present
+        if "char_count" not in parsed and "content" in parsed:
+            parsed["char_count"] = len(parsed["content"])
+        return json.dumps(parsed)
+    
+    # Fallback: try parsing entire result
     try:
         parsed = json.loads(result)
         if "platform" not in parsed:
@@ -209,9 +287,36 @@ CRITICAL: Return ONLY valid JSON in this exact format:
         return json.dumps({"platform": "Twitter", "content": result, "char_count": char_count})
 
 
+@function_tool
+def create_twitter_content(video_transcript: str) -> str:
+    """Creates concise Twitter content for quick engagement.
+    Returns JSON: {"platform": "Twitter", "content": "...", "char_count": 123}"""
+    return _create_twitter_content_impl(video_transcript)
+
+
 # -----------------------------------------------------
 # Dynamic Agent with Platform Selection
 # -----------------------------------------------------
+
+def generate_content_simple(transcript: str, platforms: list[str]) -> str:
+    """Generate content for all platforms without using agents framework"""
+    results = []
+    
+    for platform in platforms:
+        if platform == "LinkedIn":
+            content = _create_linkedin_content_impl(transcript)
+        elif platform == "Instagram":
+            content = _create_instagram_content_impl(transcript)
+        elif platform == "Twitter":
+            content = _create_twitter_content_impl(transcript)
+        else:
+            continue
+        
+        results.append(content)
+    
+    # Combine all results
+    return "\n\n".join(results)
+
 
 def create_content_agent(platforms: list[str]) -> Agent:
     """Creates an agent that only generates content for selected platforms"""
